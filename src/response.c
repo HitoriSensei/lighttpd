@@ -136,6 +136,7 @@ static void https_add_ssl_entries(connection *con) {
 	X509 *xs;
 	X509_NAME *xn;
 	X509_NAME_ENTRY *xe;
+	ASN1_INTEGER *xsn;
 	int i, nentries;
 
 	if (
@@ -207,6 +208,31 @@ static void https_add_ssl_entries(connection *con) {
 			array_insert_unique(con->environment, (data_unset *)envds);
 		}
 	}
+
+	/* Also got serial of the certificate */
+	xsn = X509_get_serialNumber(xs);
+	if (xsn)
+	{
+		data_string *envds;
+
+		char * serialHex;
+		BIGNUM *serialBN = NULL;
+
+		serialBN = ASN1_INTEGER_to_BN(xsn,NULL);
+		serialHex = BN_bn2hex(serialBN);
+
+		if (NULL == (envds = (data_string *)array_get_unused_element(con->environment, TYPE_STRING))) {
+			envds = data_string_init();
+		}
+
+		buffer_copy_string_len(envds->key, CONST_STR_LEN("SSL_CLIENT_M_SERIAL"));
+		buffer_copy_string(
+			envds->value,
+			serialHex
+		);
+		array_insert_unique(con->environment, (data_unset *)envds);
+	}
+
 	X509_free(xs);
 }
 #endif
