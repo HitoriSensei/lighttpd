@@ -1,7 +1,7 @@
 dnl                                               -*- Autoconf -*-
 dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.57)
-AC_INIT([lighttpd], [1.4.36], [contact@lighttpd.net])
+AC_INIT([lighttpd], [1.4.35], [contact@lighttpd.net])
 AC_CONFIG_SRCDIR([src/server.c])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -22,26 +22,6 @@ AM_INIT_AUTOMAKE([-Wall -Wno-portability -Wno-override foreign dist-bzip2 tar-us
 
 dnl enable with --enable-silent-rules or make V=0 (needs automake >= 1.11)
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES])
-
-
-dnl @synopsis TRY_CFLAGS [compiler flags]
-dnl @summary check whether compiler supports given C flags and adds them to CFLAGS
-AC_DEFUN([TRY_CFLAGS],
-[dnl
-  AC_MSG_CHECKING([if $CC supports $1])
-  AC_LANG_PUSH([C])
-  ac_try_cflags_saved_cflags="${CFLAGS}"
-  CFLAGS="${CFLAGS} $1"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
-    [AC_MSG_RESULT([yes])],
-    [
-      AC_MSG_ERROR([no])
-      CFLAGS="${ac_try_cflags_saved_cflags}"
-    ]
-  )
-  AC_LANG_POP([C])
-])
-
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -238,23 +218,14 @@ AC_ARG_WITH(attr, AC_HELP_STRING([--with-attr],[enable extended attribute suppor
 [WITH_ATTR=$withval],[WITH_ATTR=no])
 AC_MSG_RESULT($withval)
 if test "$WITH_ATTR" != "no"; then
-  # libattr (linux only?)
-  AC_CHECK_LIB(attr, attr_get, [
-    AC_CHECK_HEADERS([attr/attributes.h],[
-      ATTR_LIB=-lattr
-      AC_DEFINE([HAVE_XATTR], [1], [libattr])
-      AC_DEFINE([HAVE_ATTR_ATTRIBUTES_H], [1])
-    ])
-  ])
-  AC_SUBST(ATTR_LIB)
-
-  # (Free)BSD extattr
-  AC_CHECK_FUNC([extattr_get_file], [
-    AC_CHECK_HEADERS([sys/extattr.h],[
-      AC_DEFINE([HAVE_EXTATTR], [1], [BSD extended attributes])
-      AC_DEFINE([HAVE_SYS_EXTATTR_H], [1])
-    ])
-  ])
+ AC_CHECK_LIB(attr, attr_get, [
+	AC_CHECK_HEADERS([attr/attributes.h],[
+		ATTR_LIB=-lattr
+		AC_DEFINE([HAVE_XATTR], [1], [libattr])
+		AC_DEFINE([HAVE_ATTR_ATTRIBUTES_H], [1])
+	])
+ ])
+ AC_SUBST(ATTR_LIB)
 fi
 
 dnl openssl on solaris needs -lsocket -lnsl
@@ -414,7 +385,7 @@ if test "$WITH_FAM" != "no"; then
   LIBS=$FAM_LIBS
   AC_CHECK_FUNCS([FAMNoExists])
   LIBS=$OLD_LIBS
-
+  
   if test x$FAM_LIBS = x; then
      AC_MSG_ERROR([fam/gamin-headers and/or libs where not found, install them or build with --without-fam])
   fi
@@ -642,8 +613,7 @@ AM_CONDITIONAL(CHECK_WITH_FASTCGI, test "x$fastcgi_found" = xyes)
 
 dnl check for extra compiler options (warning options)
 if test "${GCC}" = "yes"; then
-  TRY_CFLAGS([-Wall -W -Wshadow -pedantic])
-  TRY_CFLAGS([-std=gnu99])
+    CFLAGS="${CFLAGS} -Wall -W -Wshadow -pedantic -std=gnu99"
 fi
 
 AC_ARG_ENABLE(extra-warnings,
@@ -655,7 +625,7 @@ AC_ARG_ENABLE(extra-warnings,
   esac],[extrawarnings=false])
 
 if test x$extrawarnings = xtrue; then
-  TRY_CFLAGS([-g -O2 -g2 -Wall -Wmissing-declarations -Wdeclaration-after-statement -Wcast-align -Winline -Wsign-compare -Wnested-externs -Wpointer-arith -Wl,--as-needed -D_FORTIFY_SOURCE=2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Werror=format-security])
+    CFLAGS="${CFLAGS} -g -O2 -g2 -Wall -Wmissing-declarations -Wdeclaration-after-statement -Wno-pointer-sign -Wcast-align -Winline -Wsign-compare -Wnested-externs -Wpointer-arith -Wl,--as-needed -Wformat-security"
 fi
 
 dnl build version-id
